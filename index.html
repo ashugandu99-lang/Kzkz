@@ -3,25 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>⚡ V14 PRO: ALWAYS-ON SNIPER</title>
+    <title>⚡ V14 PRO: PERSISTENT SNIPER</title>
     <style>
         :root { --neon: #00ff66; --bg: #000; --red: #ff003c; }
         body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; margin: 0; padding: 0; overflow-x: hidden; }
         .header { background: #111; padding: 15px; border-bottom: 3px solid var(--neon); text-align: center; }
+        
+        /* NUCLEAR FLASH */
         #flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 102, 0.5); display: none; z-index: 9999; pointer-events: none; }
-        #terminal { background: #050505; color: #0f0; font-size: 10px; padding: 10px; height: 120px; overflow-y: auto; border-bottom: 2px solid #222; line-height: 1.4; }
+        
+        /* TERMINAL / LOGS */
+        #terminal { background: #050505; color: #0f0; font-size: 10px; padding: 10px; height: 180px; overflow-y: auto; border-bottom: 2px solid #222; line-height: 1.4; }
+        .log-entry { border-left: 2px solid #0f0; padding-left: 5px; margin-bottom: 2px; }
+        .log-success { color: yellow; font-weight: bold; }
+
         .controls { padding: 15px; text-align: center; }
         .btn-start { background: var(--neon); color: #000; border: none; padding: 18px; width: 90%; font-weight: 900; border-radius: 10px; cursor: pointer; font-size: 18px; box-shadow: 0 0 20px var(--neon); }
+
         .container { padding: 10px; }
-        .wallet-card { background: #111; border: 1px solid #333; border-radius: 15px; padding: 20px; margin-bottom: 20px; position: relative; animation: slideIn 0.3s ease; }
+        .wallet-card { background: #111; border: 2px solid #333; border-radius: 15px; padding: 20px; margin-bottom: 20px; position: relative; animation: slideIn 0.3s ease; }
         .wallet-card.insider { border-color: var(--neon); box-shadow: 0 0 30px rgba(0, 255, 102, 0.4); }
-        .address-box { background: #000; border: 1px dashed var(--neon); padding: 12px; margin: 10px 0; border-radius: 8px; font-weight: bold; color: #fff; word-break: break-all; text-align: center; cursor: pointer; font-size: 14px; }
+        
+        .address-box { background: #000; border: 1px dashed var(--neon); padding: 12px; margin: 10px 0; border-radius: 8px; font-weight: bold; color: #fff; word-break: break-all; text-align: center; cursor: pointer; }
         .info { font-size: 12px; color: #aaa; margin: 5px 0; }
         .highlight { color: var(--neon); font-weight: bold; }
-        .timestamp { font-size: 9px; color: #555; text-align: right; margin-top: 5px; }
+        .timestamp { font-size: 9px; color: #444; text-align: right; margin-top: 5px; }
+
         @keyframes slideIn { from { transform: translateY(30px); opacity: 0; } }
-        .flashing { animation: flash-anim 0.1s infinite; }
         @keyframes flash-anim { 50% { opacity: 0; } }
+        .flashing { animation: flash-anim 0.1s infinite; }
     </style>
 </head>
 <body>
@@ -29,25 +39,25 @@
 <div id="flash"></div>
 
 <div class="header">
-    <div style="font-size: 10px; color: var(--neon); letter-spacing: 2px;">● HELL-FIRE ENGINE: PERSISTENT MODE</div>
+    <div style="font-size: 10px; color: var(--neon); letter-spacing: 2px;">● HELL-FIRE ENGINE: PERSISTENT TRACKER</div>
     <h2 style="margin:5px 0;">INSIDER SNIPER V14 PRO</h2>
 </div>
 
 <div id="terminal">
-    <div>> System Ready. Persistent storage: Active.</div>
-    <div>> 24H Auto-Clear: Active.</div>
+    <div class="log-entry">> Initializing Persistent System...</div>
+    <div class="log-entry">> Helius API: Active (bef5327c...e57)</div>
+    <div class="log-entry">> Target: Binance, Bybit, Coinbase, MEXC, Kraken...</div>
 </div>
 
 <div class="controls">
-    <button class="btn-start" id="startBtn" onclick="startEngine()">ACTIVATE 24/7 SCANNER</button>
+    <button class="btn-start" id="startBtn" onclick="startEngine()">START REAL-TIME SNIPER</button>
 </div>
 
-<div class="container">
-    <h3 style="color: var(--neon); font-size: 12px; border-bottom: 1px solid #333; padding-bottom: 5px;">LIVE & SAVED FEED (24H)</h3>
-    <div id="feed"></div>
+<div class="container" id="feed">
+    <!-- Saved and Live Wallets appear here -->
 </div>
 
-<audio id="alarm" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" loop></audio>
+<audio id="alarm" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
 
 <script>
     const API_KEY = "bef5327c-0eb9-407f-b9be-19ce06ef2e57";
@@ -63,54 +73,169 @@
     let isRunning = false;
     let walletKeys = Object.keys(CEX_WALLETS);
     let currentIndex = 0;
-    let wakeLock = null;
 
-    // Load saved data and cleanup old ones
+    // --- NEW: Persistence Logic ---
     window.onload = () => {
-        requestNotificationPermission();
-        cleanAndLoadSavedData();
+        askNotificationPermission();
+        loadFromStorage();
     };
 
-    function log(msg) {
+    function log(msg, isSuccess = false) {
         const t = document.getElementById('terminal');
         const div = document.createElement('div');
+        div.className = isSuccess ? "log-entry log-success" : "log-entry";
         div.innerText = `> [${new Date().toLocaleTimeString()}] ${msg}`;
         t.prepend(div);
         if (t.childNodes.length > 50) t.lastChild.remove();
     }
 
-    async function requestNotificationPermission() {
+    function askNotificationPermission() {
         if (Notification.permission !== "granted") {
-            await Notification.requestPermission();
+            Notification.requestPermission();
         }
     }
 
     async function startEngine() {
         if (isRunning) return;
         isRunning = true;
-        document.getElementById('startBtn').innerText = "SCANNING 24/7 (ACTIVE)";
-        document.getElementById('startBtn').style.background = "#333";
-        document.getElementById('startBtn').style.color = "#888";
+        document.getElementById('startBtn').innerText = "SYSTEM ACTIVE - SCANNING";
+        document.getElementById('startBtn').style.opacity = "0.6";
         
-        // Prevent screen sleep
-        if ('wakeLock' in navigator) {
-            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-        }
-
         document.getElementById('alarm').play().then(() => document.getElementById('alarm').pause());
-        log("Engine Started. Persistence enabled.");
-
+        log("Engine Started. Persistent storage active.");
+        
         setInterval(() => {
             const currentCex = walletKeys[currentIndex];
             scanCEX(currentCex, CEX_WALLETS[currentCex]);
             currentIndex = (currentIndex + 1) % walletKeys.length;
         }, 1500);
 
-        // Every 10 mins, clean up old 24h cards
-        setInterval(cleanAndLoadSavedData, 600000);
+        // Auto-cleanup every 10 mins
+        setInterval(loadFromStorage, 600000);
     }
 
     async function scanCEX(addr, name) {
+        try {
+            const url = `https://api.helius.xyz/v0/addresses/${addr}/transactions?api-key=${API_KEY}`;
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const txs = await res.json();
+
+            if (!txs || txs.length === 0) return;
+
+            txs.forEach(tx => {
+                if (seenSigs.has(tx.signature)) return;
+                seenSigs.add(tx.signature);
+
+                if (tx.nativeTransfers) {
+                    tx.nativeTransfers.forEach(transfer => {
+                        if (transfer.fromUserAccount === addr) {
+                            const solAmount = transfer.amount / 1000000000;
+                            if (solAmount > 0.01) {
+                                verifyNewWallet(transfer.toUserAccount, solAmount, name, tx.signature);
+                            }
+                        }
+                    });
+                }
+            });
+        } catch (e) { }
+    }
+
+    async function verifyNewWallet(wallet, amount, exchange, sig) {
+        try {
+            const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${API_KEY}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data && data.length <= 3) {
+                saveToLocalStorage(wallet, amount, exchange, sig);
+            }
+        } catch (e) {}
+    }
+
+    function saveToLocalStorage(wallet, amount, exchange, sig) {
+        let history = JSON.parse(localStorage.getItem('sniper_v14_data') || '[]');
+        if (history.some(item => item.wallet === wallet)) return;
+
+        const newData = {
+            wallet, amount, exchange, sig,
+            time: Date.now()
+        };
+
+        history.push(newData);
+        localStorage.setItem('sniper_v14_data', JSON.stringify(history));
+        
+        // Notification
+        if (Notification.permission === "granted") {
+            new Notification("🚨 NEW INSIDER DETECTED", { body: `${exchange} sent ${amount} SOL to new wallet!` });
+        }
+
+        renderCard(newData, true);
+    }
+
+    function renderCard(item, isNew = false) {
+        const feed = document.getElementById('feed');
+        
+        const card = document.createElement('div');
+        card.className = 'wallet-card insider';
+        const dateStr = new Date(item.time).toLocaleString();
+
+        card.innerHTML = `
+            <div style="background:#fff; color:#000; font-size:10px; font-weight:bold; padding:2px 5px; border-radius:3px; position:absolute; top:10px; right:10px;">CEX DETECTED</div>
+            <div style="color:var(--neon); font-weight:bold; font-size:14px;">🚨 NEW INSIDER WALLET</div>
+            <div class="address-box" onclick="copy('${item.wallet}')">${item.wallet}</div>
+            <div class="info">FROM: <span class="highlight">${item.exchange}</span> | AMOUNT: <span class="highlight">${item.amount.toFixed(3)} SOL</span></div>
+            <div class="info">TX: <a href="https://solscan.io/tx/${item.sig}" target="_blank" style="color:var(--neon)">View Proof</a></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <a href="https://photon-sol.tinyastro.io/en/lp/${item.wallet}" target="_blank" style="flex:1; background:#0088ff; color:#fff; text-align:center; padding:10px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:12px;">TRACK ON PHOTON</a>
+            </div>
+            <div class="timestamp">Found: ${dateStr}</div>
+        `;
+
+        if (isNew) {
+            feed.prepend(card);
+            triggerAlert(item.exchange);
+        } else {
+            feed.appendChild(card);
+        }
+    }
+
+    function loadFromStorage() {
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        let history = JSON.parse(localStorage.getItem('sniper_v14_data') || '[]');
+        const now = Date.now();
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        // Cleanup: Filter only items less than 24h old
+        const freshData = history.filter(item => (now - item.time) < oneDay);
+        localStorage.setItem('sniper_v14_data', JSON.stringify(freshData));
+
+        freshData.sort((a,b) => b.time - a.time).forEach(item => renderCard(item, false));
+        log(`Memory synced: ${freshData.length} active records.`);
+    }
+
+    function triggerAlert(exchange) {
+        const flash = document.getElementById('flash');
+        const alarm = document.getElementById('alarm');
+        log(`💰 HIT! ${exchange} funded a new wallet!`, true);
+        
+        flash.style.display = 'block';
+        flash.classList.add('flashing');
+        alarm.currentTime = 0;
+        alarm.play().catch(e => {});
+        
+        if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+        setTimeout(() => { flash.style.display = 'none'; flash.classList.remove('flashing'); }, 4000);
+    }
+
+    function copy(t) {
+        navigator.clipboard.writeText(t);
+        alert("Wallet Address Copied!");
+    }
+</script>
+</body>
+</html>    async function scanCEX(addr, name) {
         try {
             const url = `https://api.helius.xyz/v0/addresses/${addr}/transactions?api-key=${API_KEY}`;
             const res = await fetch(url);
