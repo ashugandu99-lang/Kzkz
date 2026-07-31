@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>⚡ V14 PRO: PERSISTENT SNIPER</title>
+    <title>⚡ INSIDER SNIPER V14 - PERSISTENT</title>
     <style>
         :root { --neon: #00ff66; --bg: #000; --red: #ff003c; }
         body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; margin: 0; padding: 0; overflow-x: hidden; }
@@ -39,23 +39,21 @@
 <div id="flash"></div>
 
 <div class="header">
-    <div style="font-size: 10px; color: var(--neon); letter-spacing: 2px;">● HELL-FIRE ENGINE: PERSISTENT TRACKER</div>
-    <h2 style="margin:5px 0;">INSIDER SNIPER V14 PRO</h2>
+    <div style="font-size: 10px; color: var(--neon); letter-spacing: 2px;">● HELL-FIRE ENGINE: ON-CHAIN CEX TRACKER</div>
+    <h2 style="margin:5px 0;">INSIDER SNIPER V14</h2>
 </div>
 
 <div id="terminal">
-    <div class="log-entry">> Initializing Persistent System...</div>
-    <div class="log-entry">> Helius API: Active (bef5327c...e57)</div>
-    <div class="log-entry">> Target: Binance, Bybit, Coinbase, MEXC, Kraken...</div>
+    <div class="log-entry">> System Booting... Memory Sync Active.</div>
+    <div class="log-entry">> Helius API Key: Active (bef5327c...e57)</div>
+    <div class="log-entry">> Ready to Scan: Binance, Bybit, Coinbase, MEXC...</div>
 </div>
 
 <div class="controls">
-    <button class="btn-start" id="startBtn" onclick="startEngine()">START REAL-TIME SNIPER</button>
+    <button class="btn-start" id="startBtn" onclick="startEngine()">START ENGINE</button>
 </div>
 
-<div class="container" id="feed">
-    <!-- Saved and Live Wallets appear here -->
-</div>
+<div class="container" id="feed"></div>
 
 <audio id="alarm" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
 
@@ -74,10 +72,10 @@
     let walletKeys = Object.keys(CEX_WALLETS);
     let currentIndex = 0;
 
-    // --- NEW: Persistence Logic ---
+    // --- Persistence & Notification Setup ---
     window.onload = () => {
-        askNotificationPermission();
-        loadFromStorage();
+        if (Notification.permission !== "granted") Notification.requestPermission();
+        loadSavedData();
     };
 
     function log(msg, isSuccess = false) {
@@ -89,20 +87,14 @@
         if (t.childNodes.length > 50) t.lastChild.remove();
     }
 
-    function askNotificationPermission() {
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-    }
-
     async function startEngine() {
         if (isRunning) return;
         isRunning = true;
-        document.getElementById('startBtn').innerText = "SYSTEM ACTIVE - SCANNING";
-        document.getElementById('startBtn').style.opacity = "0.6";
+        document.getElementById('startBtn').innerText = "ENGINE RUNNING...";
+        document.getElementById('startBtn').style.opacity = "0.5";
         
         document.getElementById('alarm').play().then(() => document.getElementById('alarm').pause());
-        log("Engine Started. Persistent storage active.");
+        log("Engine Started. Persistence & Notifications Armed.");
         
         setInterval(() => {
             const currentCex = walletKeys[currentIndex];
@@ -111,7 +103,7 @@
         }, 1500);
 
         // Auto-cleanup every 10 mins
-        setInterval(loadFromStorage, 600000);
+        setInterval(loadSavedData, 600000);
     }
 
     async function scanCEX(addr, name) {
@@ -148,200 +140,81 @@
             const data = await res.json();
 
             if (data && data.length <= 3) {
-                saveToLocalStorage(wallet, amount, exchange, sig);
+                processHit(wallet, amount, exchange, sig);
             }
         } catch (e) {}
     }
 
-    function saveToLocalStorage(wallet, amount, exchange, sig) {
-        let history = JSON.parse(localStorage.getItem('sniper_v14_data') || '[]');
-        if (history.some(item => item.wallet === wallet)) return;
-
-        const newData = {
+    function processHit(wallet, amount, exchange, sig) {
+        const hitData = {
             wallet, amount, exchange, sig,
             time: Date.now()
         };
 
-        history.push(newData);
-        localStorage.setItem('sniper_v14_data', JSON.stringify(history));
-        
-        // Notification
-        if (Notification.permission === "granted") {
-            new Notification("🚨 NEW INSIDER DETECTED", { body: `${exchange} sent ${amount} SOL to new wallet!` });
-        }
+        // Save to Storage
+        let history = JSON.parse(localStorage.getItem('v14_sniper_history') || '[]');
+        if (history.some(item => item.wallet === wallet)) return;
+        history.push(hitData);
+        localStorage.setItem('v14_sniper_history', JSON.stringify(history));
 
-        renderCard(newData, true);
-    }
-
-    function renderCard(item, isNew = false) {
-        const feed = document.getElementById('feed');
-        
-        const card = document.createElement('div');
-        card.className = 'wallet-card insider';
-        const dateStr = new Date(item.time).toLocaleString();
-
-        card.innerHTML = `
-            <div style="background:#fff; color:#000; font-size:10px; font-weight:bold; padding:2px 5px; border-radius:3px; position:absolute; top:10px; right:10px;">CEX DETECTED</div>
-            <div style="color:var(--neon); font-weight:bold; font-size:14px;">🚨 NEW INSIDER WALLET</div>
-            <div class="address-box" onclick="copy('${item.wallet}')">${item.wallet}</div>
-            <div class="info">FROM: <span class="highlight">${item.exchange}</span> | AMOUNT: <span class="highlight">${item.amount.toFixed(3)} SOL</span></div>
-            <div class="info">TX: <a href="https://solscan.io/tx/${item.sig}" target="_blank" style="color:var(--neon)">View Proof</a></div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <a href="https://photon-sol.tinyastro.io/en/lp/${item.wallet}" target="_blank" style="flex:1; background:#0088ff; color:#fff; text-align:center; padding:10px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:12px;">TRACK ON PHOTON</a>
-            </div>
-            <div class="timestamp">Found: ${dateStr}</div>
-        `;
-
-        if (isNew) {
-            feed.prepend(card);
-            triggerAlert(item.exchange);
-        } else {
-            feed.appendChild(card);
-        }
-    }
-
-    function loadFromStorage() {
-        const feed = document.getElementById('feed');
-        feed.innerHTML = '';
-        let history = JSON.parse(localStorage.getItem('sniper_v14_data') || '[]');
-        const now = Date.now();
-        const oneDay = 24 * 60 * 60 * 1000;
-
-        // Cleanup: Filter only items less than 24h old
-        const freshData = history.filter(item => (now - item.time) < oneDay);
-        localStorage.setItem('sniper_v14_data', JSON.stringify(freshData));
-
-        freshData.sort((a,b) => b.time - a.time).forEach(item => renderCard(item, false));
-        log(`Memory synced: ${freshData.length} active records.`);
-    }
-
-    function triggerAlert(exchange) {
-        const flash = document.getElementById('flash');
-        const alarm = document.getElementById('alarm');
-        log(`💰 HIT! ${exchange} funded a new wallet!`, true);
-        
-        flash.style.display = 'block';
-        flash.classList.add('flashing');
-        alarm.currentTime = 0;
-        alarm.play().catch(e => {});
-        
-        if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-        setTimeout(() => { flash.style.display = 'none'; flash.classList.remove('flashing'); }, 4000);
-    }
-
-    function copy(t) {
-        navigator.clipboard.writeText(t);
-        alert("Wallet Address Copied!");
-    }
-</script>
-</body>
-</html>    async function scanCEX(addr, name) {
-        try {
-            const url = `https://api.helius.xyz/v0/addresses/${addr}/transactions?api-key=${API_KEY}`;
-            const res = await fetch(url);
-            const txs = await res.json();
-
-            if (!txs || txs.length === 0) return;
-
-            txs.forEach(tx => {
-                if (seenSigs.has(tx.signature)) return;
-                seenSigs.add(tx.signature);
-
-                if (tx.nativeTransfers) {
-                    tx.nativeTransfers.forEach(transfer => {
-                        if (transfer.fromUserAccount === addr && transfer.amount > 10000000) {
-                            verifyNewWallet(transfer.toUserAccount, transfer.amount / 1000000000, name, tx.signature);
-                        }
-                    });
-                }
-            });
-        } catch (e) {}
-    }
-
-    async function verifyNewWallet(wallet, amount, exchange, sig) {
-        try {
-            const res = await fetch(`https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${API_KEY}`);
-            const data = await res.json();
-
-            if (data && data.length <= 3) {
-                saveAndAlert(wallet, amount, exchange, sig);
-            }
-        } catch (e) {}
-    }
-
-    function saveAndAlert(wallet, amount, exchange, sig) {
-        const item = { wallet, amount, exchange, sig, timestamp: Date.now() };
-        
-        // Save to LocalStorage
-        let saved = JSON.parse(localStorage.getItem('sniperHits') || '[]');
-        if (saved.some(i => i.wallet === wallet)) return; // Avoid duplicates
-        saved.push(item);
-        localStorage.setItem('sniperHits', JSON.stringify(saved));
-
-        // Show UI & Notification
-        renderCard(item, true);
-        sendNotification(exchange, amount, wallet);
-        
-        // Alert Effects
-        const flash = document.getElementById('flash');
-        const alarm = document.getElementById('alarm');
-        flash.style.display = 'block';
-        flash.classList.add('flashing');
-        alarm.currentTime = 0;
-        alarm.play();
-        
-        setTimeout(() => { 
-            flash.style.display = 'none'; 
-            flash.classList.remove('flashing'); 
-            alarm.pause();
-        }, 5000);
-    }
-
-    function sendNotification(exchange, amount, wallet) {
+        // Browser Notification
         if (Notification.permission === "granted") {
             new Notification("🚨 NEW INSIDER DETECTED", {
-                body: `${exchange} sent ${amount} SOL to ${wallet.slice(0, 8)}...`,
+                body: `${exchange} sent ${amount} SOL to a new wallet!`,
                 icon: "https://dexscreener.com/favicon.ico"
             });
         }
+
+        nuclearAlert(hitData, true);
     }
 
-    function renderCard(item, isNew = false) {
+    function nuclearAlert(data, isNew = false) {
         const feed = document.getElementById('feed');
+        const flash = document.getElementById('flash');
+        const alarm = document.getElementById('alarm');
+
+        if (isNew) {
+            log(`💰 BOOM! ${data.exchange} FUNDED NEW WALLET: ${data.wallet}`, true);
+            flash.style.display = 'block';
+            flash.classList.add('flashing');
+            alarm.currentTime = 0;
+            alarm.play().catch(e => {});
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+            setTimeout(() => { flash.style.display = 'none'; flash.classList.remove('flashing'); }, 4000);
+        }
+
         const card = document.createElement('div');
-        card.className = `wallet-card ${isNew ? 'insider' : ''}`;
-        card.id = `card-${item.wallet}`;
-        const timeStr = new Date(item.timestamp).toLocaleString();
+        card.className = 'wallet-card insider';
+        const dateStr = new Date(data.time).toLocaleString();
 
         card.innerHTML = `
             <div style="background:#fff; color:#000; font-size:10px; font-weight:bold; padding:2px 5px; border-radius:3px; position:absolute; top:10px; right:10px;">CEX DETECTED</div>
             <div style="color:var(--neon); font-weight:bold; font-size:14px;">🚨 NEW INSIDER WALLET</div>
-            <div class="address-box" onclick="copy('${item.wallet}')">${item.wallet}</div>
-            <div class="info">FROM: <span class="highlight">${item.exchange}</span> | AMOUNT: <span class="highlight">${item.amount.toFixed(3)} SOL</span></div>
-            <div class="info">TX: <a href="https://solscan.io/tx/${item.sig}" target="_blank" style="color:var(--neon)">View Proof</a></div>
-            <div class="btn-group" style="display:flex; gap:10px; margin-top:10px;">
-                <a href="https://photon-sol.tinyastro.io/en/lp/${item.wallet}" target="_blank" style="flex:1; background:#0088ff; color:#fff; text-align:center; padding:10px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:12px;">TRACK ON PHOTON</a>
+            <div class="address-box" onclick="copy('${data.wallet}')">${data.wallet}</div>
+            <div class="info">FROM: <span class="highlight">${data.exchange}</span> | AMOUNT: <span class="highlight">${data.amount.toFixed(3)} SOL</span></div>
+            <div class="info">TX: <a href="https://solscan.io/tx/${data.sig}" target="_blank" style="color:var(--neon)">View Proof</a></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <a href="https://photon-sol.tinyastro.io/en/lp/${data.wallet}" target="_blank" style="flex:1; background:#0088ff; color:#fff; text-align:center; padding:10px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:12px;">TRACK ON PHOTON</a>
             </div>
-            <div class="timestamp">Detected: ${timeStr}</div>
+            <div class="timestamp">Detected: ${dateStr}</div>
         `;
-        
-        if (isNew) feed.prepend(card);
-        else feed.appendChild(card);
+        feed.prepend(card);
     }
 
-    function cleanAndLoadSavedData() {
+    function loadSavedData() {
         const feed = document.getElementById('feed');
         feed.innerHTML = '';
+        let history = JSON.parse(localStorage.getItem('v14_sniper_history') || '[]');
+        const now = Date.now();
         const oneDay = 24 * 60 * 60 * 1000;
-        let data = JSON.parse(localStorage.getItem('sniperHits') || '[]');
-        
-        // Filter out items older than 24h
-        const freshData = data.filter(item => (Date.now() - item.timestamp) < oneDay);
-        localStorage.setItem('sniperHits', JSON.stringify(freshData));
 
-        // Sort by newest first and render
-        freshData.sort((a, b) => b.timestamp - a.timestamp).forEach(item => renderCard(item));
-        log(`Loaded ${freshData.length} active hits from last 24h.`);
+        // Cleanup older than 24h
+        const freshData = history.filter(item => (now - item.time) < oneDay);
+        localStorage.setItem('v14_sniper_history', JSON.stringify(freshData));
+
+        // Load into UI
+        freshData.forEach(item => nuclearAlert(item, false));
+        log(`Synced ${freshData.length} records from memory.`);
     }
 
     function copy(t) {
